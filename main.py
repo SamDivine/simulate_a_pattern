@@ -13,7 +13,7 @@ random.seed(time.time())
 max_width = 1200
 max_height = 675
 
-random_x_range = (0, 100)
+random_x_range = (0, 200)
 random_y_range = (0, 200)
 
 config = {
@@ -29,7 +29,7 @@ config = {
 	"p1": 0.6,
 	"p2": 0.35,
 	"p3": 0.05,
-	"M": 5,
+	"M": 400,
 	"N": 2000,
 }
 
@@ -144,11 +144,10 @@ class Simulator(object):
 				self.min_y = y
 
 	def generate_first(self):
-		random_x_list = random.sample(range(*random_x_range), self.M)
-		random_y_list = random.sample(range(*random_y_range), self.M)
 		for m in xrange(self.M):
+			print(m)
 			while True:
-				ball = Ball(m, random_x_list[m], random_y_list[m])
+				ball = Ball(m, random.randrange(*random_x_range), random.randrange(*random_y_range))
 				for p in self.to_generate:
 					if self.distance_square(ball, p) < self.d*self.d:
 						break
