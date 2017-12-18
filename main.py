@@ -10,11 +10,11 @@ import time
 
 random.seed(time.time())
 
-canvas_width = 800
+canvas_width = 400
 canvas_height = 800
 
-random_x_range = 400
-random_y_range = 100
+random_x_range = 100
+random_y_range = 400
 
 config = {
 	"a": 4,
@@ -28,7 +28,7 @@ config = {
 	"p1": 0.6,
 	"p2": 0.35,
 	"p3": 0.05,
-	"M": 10,
+	"M": 2,
 	"N": 2000,
 }
 
@@ -140,7 +140,7 @@ class Simulator(object):
 
 	def get_new_pos(self, parent, dis, degree):
 		x, y = parent.x, parent.y
-		return x + dis*dsin(degree), y+dis*dcos(degree)
+		return x + dis*dcos(degree), y+dis*dsin(degree)
 
 	def distance_square(self, p1, p2):
 		x_diff = p1.x-p2.x
@@ -228,11 +228,15 @@ class Simulator(object):
 			if ret is True:
 				self.to_generate.pop(g_idx)
 
-	def draw(self, win):
-		height, width = win.height, win.width
+	def draw(self, title="test"):
+		#height, width = win.height, win.width
+		#
 		addition_bound = 2*max(self.r1, self.r2)
 		graph_height = self.max_y-self.min_y + 2*addition_bound
 		graph_width = self.max_x-self.min_x + 2*addition_bound
+		height = canvas_height
+		width = height/graph_height*graph_width
+		win = graphics.GraphWin(title, width, height)
 		x_scale = width/graph_width
 		y_scale = height/graph_height
 		point_scale = (x_scale+y_scale)/2
@@ -255,6 +259,8 @@ class Simulator(object):
 			li.setOutline(line_color)
 			li.setFill(line_color)
 			li.setWidth(line_weight)
+		win.getMouse()
+		a = raw_input("press any key to shutdown")
 
 
 
@@ -275,10 +281,7 @@ def check_generation():
 	print(s.min_x)
 	print(s.max_y)
 	print(s.min_y)
-	win = graphics.GraphWin("test", canvas_width, canvas_height)
-	s.draw(win)
-	win.getMouse()
-	a = raw_input("press any key to shutdown")
+	s.draw("test")
 
 
 def main():
