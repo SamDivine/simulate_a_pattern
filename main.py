@@ -74,6 +74,8 @@ class BaseP(object):
 		self.idx = idx
 		self.parent = parent
 		self.n = Vector(*(config["n"])).degree if parent is None else self.next_n(parent)
+		self.is_endpoint = True
+		self.is_node = False
 
 	def next_n(self, parent):
 		return parent.n
@@ -85,6 +87,7 @@ class Ball(BaseP):
 class Node(BaseP):
 	def __init__(self, idx, x, y, parent=None):
 		super(Node, self).__init__(idx, x, y, config["r2"], parent)
+		self.is_node = True
 
 class Line(object):
 	def __init__(self, parent, child):
@@ -203,6 +206,7 @@ class Simulator(object):
 		ball = self.get_new_ball(parent)
 		idx = ball.idx
 		if self.check_position(ball):
+			parent.is_endpoint = False
 			self.lines.append(Line(parent, ball))
 			self.modify_bound(ball)
 			self.trees[idx].append(ball)
@@ -221,6 +225,8 @@ class Simulator(object):
 		b1.x, b1.y = self.get_new_pos(node, self.b, n1+self.alpha)
 		b2.x, b2.y = self.get_new_pos(node, self.b, n2-self.alpha)
 		if self.check_position(node) and self.check_position(b1) and self.check_position(b2):
+			parent.is_endpoint = False
+			node.is_endpoint = False
 			self.lines.extend([Line(parent, node), Line(node, b1), Line(node, b2)])
 			self.modify_bound(node, b1, b2)
 			self.trees[idx].extend([node, b1, b2])
@@ -289,9 +295,23 @@ class Simulator(object):
 		self.save_points()
 
 	def save_points(self):
+		endpoints = 0
+		nodes = 0
 		with open("points.csv", "wb") as fp:
+			points_info_list = list()
 			for p in self.all_p:
-				fp.write("{},{},{},{},{}\n".format(p.x, p.y, p.r, p.n, p.idx))
+				if p.is_endpoint is True:
+					endpoints += 1
+				if p.is_node is True:
+					nodes += 1
+				points_info_list.append("{},{},{},{},{}".format(p.x, p.y, p.r, p.n, p.idx))
+			write_list = ["{},{},{}".format(len(self.all_p), nodes, endpoints)] + points_info_list
+			fp.write("\n".join(write_list))
+
+	def save_lines(self):
+		with open("lines.csv", "wb") as fp:
+			for line in self.lines:
+				fp.write("{}, {}, {}, {}\n".format(line.x1, line.y1, line.x2, line.y2))
 		
 	def save_csv(self, axis_name):
 		x_list = sorted(self.all_p, key=lambda p: getattr(p, axis_name))
