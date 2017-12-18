@@ -4,7 +4,7 @@ from __future__ import division
 import os
 
 import graphics
-from math import tan, radians, sin, cos, degrees, atan
+from math import tan, radians, sin, cos, degrees, atan, pi
 import random
 import time
 
@@ -13,11 +13,11 @@ random.seed(time.time())
 max_width = 1200
 max_height = 675
 
-random_x_range = 100
-random_y_range = 200
+random_x_range = (0, 100)
+random_y_range = (0, 200)
 
 config = {
-	"n": (1, 0),
+	"t": 2000,
 	"a": 4,
 	"b": 4,
 	"c": 4,
@@ -32,6 +32,10 @@ config = {
 	"M": 5,
 	"N": 2000,
 }
+
+def new_nv(x, y):
+	t = config["t"]
+	return (cos((x-pi/2)/t), (pi/2-x)/t*cos(y/t))
 
 background_color = "white"
 circle_color = "black"
@@ -73,12 +77,16 @@ class BaseP(object):
 		self.r = r
 		self.idx = idx
 		self.parent = parent
-		self.n = Vector(*(config["n"])).degree if parent is None else self.next_n(parent)
 		self.is_endpoint = True
 		self.is_node = False
 
-	def next_n(self, parent):
-		return parent.n
+	@property
+	def n(self):
+		return self.nv.degree
+
+	@property
+	def nv(self):
+		return Vector(*(new_nv(self.x, self.y)))
 
 class Ball(BaseP):
 	def __init__(self, idx, x, y, parent=None):
@@ -136,8 +144,8 @@ class Simulator(object):
 				self.min_y = y
 
 	def generate_first(self):
-		random_x_list = random.sample(range(random_x_range), self.M)
-		random_y_list = random.sample(range(random_y_range), self.M)
+		random_x_list = random.sample(range(*random_x_range), self.M)
+		random_y_list = random.sample(range(*random_y_range), self.M)
 		for m in xrange(self.M):
 			while True:
 				ball = Ball(m, random_x_list[m], random_y_list[m])
@@ -183,24 +191,23 @@ class Simulator(object):
 				return False
 		return True
 
-	def get_new_p(self, parent, cls):
+	def get_new_p(self, parent, cls, dis):
 		x, y, idx = parent.x, parent.y, parent.idx
 		point = cls(parent.idx, parent.x, parent.y, parent)
-		n = point.n
+		n = parent.n
 		rand = random.random()
 		if rand < 0.5:
 			degree = n+self.beta
 		else:
 			degree = n-self.beta
-		dis = self.c
 		point.x, point.y = self.get_new_pos(parent, dis, degree)
 		return point
 
 	def get_new_ball(self, parent):
-		return self.get_new_p(parent, Ball)
+		return self.get_new_p(parent, Ball, self.c)
 
 	def get_new_node(self, parent):
-		return self.get_new_p(parent, Node)
+		return self.get_new_p(parent, Node, self.a)
 
 	def add_ball(self, parent):
 		ball = self.get_new_ball(parent)
@@ -220,10 +227,9 @@ class Simulator(object):
 		x, y, idx = node.x, node.y, node.idx
 		b1 = Ball(idx, x, y, node)
 		b2 = Ball(idx, x, y, node)
-		n1 = b1.n
-		n2 = b2.n
-		b1.x, b1.y = self.get_new_pos(node, self.b, n1+self.alpha)
-		b2.x, b2.y = self.get_new_pos(node, self.b, n2-self.alpha)
+		n = node.n
+		b1.x, b1.y = self.get_new_pos(node, self.b, n+self.alpha)
+		b2.x, b2.y = self.get_new_pos(node, self.b, n-self.alpha)
 		if self.check_position(node) and self.check_position(b1) and self.check_position(b2):
 			parent.is_endpoint = False
 			node.is_endpoint = False
@@ -293,6 +299,7 @@ class Simulator(object):
 		self.save_csv("x")
 		self.save_csv("y")
 		self.save_points()
+		self.save_lines()
 
 	def save_points(self):
 		endpoints = 0
