@@ -10,8 +10,8 @@ import time
 
 random.seed(time.time())
 
-canvas_width = 400
-canvas_height = 800
+max_width = 1200
+max_height = 675
 
 random_x_range = 100
 random_y_range = 400
@@ -28,7 +28,7 @@ config = {
 	"p1": 0.6,
 	"p2": 0.35,
 	"p3": 0.05,
-	"M": 2,
+	"M": 5,
 	"N": 2000,
 }
 
@@ -234,8 +234,11 @@ class Simulator(object):
 		addition_bound = 2*max(self.r1, self.r2)
 		graph_height = self.max_y-self.min_y + 2*addition_bound
 		graph_width = self.max_x-self.min_x + 2*addition_bound
-		height = canvas_height
-		width = height/graph_height*graph_width
+		width = max_width
+		height = int(width/graph_width*graph_height)
+		if height > max_height:
+			width = width/height * max_height
+			height = max_height
 		win = graphics.GraphWin(title, width, height)
 		x_scale = width/graph_width
 		y_scale = height/graph_height
