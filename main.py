@@ -29,7 +29,7 @@ config = {
 	"p1": 0.6,
 	"p2": 0.35,
 	"p3": 0.05,
-	"M": 400,
+	"M": 40,
 	"N": 2000,
 }
 
@@ -67,8 +67,11 @@ class Vector(object):
 			if self.y > 0:
 				return 90.0
 			if self.y < 0:
-				return 270.0
-		return degrees(atan(self.y/self.x))
+				return -90.0
+		ret = degrees(atan(self.y/self.x))
+		if self.x < 0:
+			ret = ret + 180.0
+		return ret
 
 class BaseP(object):
 	def __init__(self, idx, x, y, r, parent=None):
@@ -145,7 +148,6 @@ class Simulator(object):
 
 	def generate_first(self):
 		for m in xrange(self.M):
-			print(m)
 			while True:
 				ball = Ball(m, random.randrange(*random_x_range), random.randrange(*random_y_range))
 				for p in self.to_generate:
