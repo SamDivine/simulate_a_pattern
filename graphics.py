@@ -216,7 +216,7 @@ class GraphWin(tk.Canvas):
                            highlightthickness=0, bd=0)
         self.master.title(title)
         self.pack()
-        #master.resizable(0,0)
+        master.resizable(0,0)
         self.foreground = "black"
         self.items = []
         self.mouseX = None
