@@ -33,6 +33,7 @@ config = {
 	"N": 2000,
 }
 
+background_color = "white"
 circle_color = "black"
 line_color = "black"
 line_weight = 1
@@ -256,7 +257,7 @@ class Simulator(object):
 			width = width/height * max_height
 			height = max_height
 		win = graphics.GraphWin(title, width, height)
-		win.setBackground("white")
+		win.setBackground(background_color)
 		x_scale = width/graph_width
 		y_scale = height/graph_height
 		point_scale = (x_scale+y_scale)/2
