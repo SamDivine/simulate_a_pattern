@@ -17,7 +17,7 @@ random_x_range = (0, 200)
 random_y_range = (0, 200)
 
 config = {
-	"t": 2000,
+	"t": 200,
 	"a": 4,
 	"b": 4,
 	"c": 4,
@@ -29,13 +29,13 @@ config = {
 	"p1": 0.6,
 	"p2": 0.35,
 	"p3": 0.05,
-	"M": 40,
+	"M": 10,
 	"N": 2000,
 }
 
 def new_nv(x, y):
 	t = config["t"]
-	return (cos((x-pi/2)/t), (pi/2-x)/t*cos(y/t))
+	return (cos(x/t-pi/2), (pi/2-x/t)*cos(y/t))
 
 background_color = "white"
 circle_color = "black"
