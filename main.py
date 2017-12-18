@@ -4,7 +4,7 @@ from __future__ import division
 import os
 
 import graphics
-from math import tan, radians, sin, cos
+from math import tan, radians, sin, cos, degrees, atan
 import random
 import time
 
@@ -14,9 +14,10 @@ max_width = 1200
 max_height = 675
 
 random_x_range = 100
-random_y_range = 400
+random_y_range = 200
 
 config = {
+	"n": (1, 0),
 	"a": 4,
 	"b": 4,
 	"c": 4,
@@ -36,6 +37,9 @@ circle_color = "black"
 line_color = "black"
 line_weight = 1
 
+def close_enough(n1, n2, rel_tol=1e-09, abs_tol=0.0):
+	return abs(n1-n2) <= max(rel_tol*max(abs(n1), abs(n2)), abs_tol)
+
 def dtan(d):
 	return tan(radians(d))
 
@@ -45,6 +49,22 @@ def dsin(d):
 def dcos(d):
 	return cos(radians(d))
 
+class Vector(object):
+	def __init__(self, x, y):
+		self.x = x
+		self.y = y
+
+	@property
+	def degree(self):
+		if close_enough(self.x, 0.0):
+			if close_enough(self.y, 0.0):
+				raise RuntimeError("please tell me what's direction of vector (0,0)...")
+			if self.y > 0:
+				return 90.0
+			if self.y < 0:
+				return 270.0
+		return degrees(atan(self.y/self.x))
+
 class BaseP(object):
 	def __init__(self, idx, x, y, r, parent=None):
 		self.x = x
@@ -52,7 +72,7 @@ class BaseP(object):
 		self.r = r
 		self.idx = idx
 		self.parent = parent
-		self.n = 0 if parent is None else self.next_n(parent)
+		self.n = Vector(*(config["n"])).degree if parent is None else self.next_n(parent)
 
 	def next_n(self, parent):
 		return parent.n
@@ -85,7 +105,6 @@ class Simulator(object):
 		self.p1 = conf["p1"]
 		self.p2 = conf["p2"]
 		self.p3 = conf["p3"]
-		self.n = 0
 		self.M = conf["M"]
 		self.N = conf["N"]
 
@@ -166,11 +185,10 @@ class Simulator(object):
 		n = point.n
 		rand = random.random()
 		if rand < 0.5:
-			degree = n+self.alpha
-			dis = self.b
+			degree = n+self.beta
 		else:
 			degree = n-self.beta
-			dis = self.c
+		dis = self.c
 		point.x, point.y = self.get_new_pos(parent, dis, degree)
 		return point
 
@@ -200,7 +218,7 @@ class Simulator(object):
 		n1 = b1.n
 		n2 = b2.n
 		b1.x, b1.y = self.get_new_pos(node, self.b, n1+self.alpha)
-		b2.x, b2.y = self.get_new_pos(node, self.c, n2-self.beta)
+		b2.x, b2.y = self.get_new_pos(node, self.b, n2-self.alpha)
 		if self.check_position(node) and self.check_position(b1) and self.check_position(b2):
 			self.lines.extend([Line(parent, node), Line(node, b1), Line(node, b2)])
 			self.modify_bound(node, b1, b2)
@@ -229,8 +247,6 @@ class Simulator(object):
 				self.to_generate.pop(g_idx)
 
 	def draw(self, title="test"):
-		#height, width = win.height, win.width
-		#
 		addition_bound = 2*max(self.r1, self.r2)
 		graph_height = self.max_y-self.min_y + 2*addition_bound
 		graph_width = self.max_x-self.min_x + 2*addition_bound
@@ -240,6 +256,7 @@ class Simulator(object):
 			width = width/height * max_height
 			height = max_height
 		win = graphics.GraphWin(title, width, height)
+		win.setBackground("white")
 		x_scale = width/graph_width
 		y_scale = height/graph_height
 		point_scale = (x_scale+y_scale)/2
@@ -265,8 +282,34 @@ class Simulator(object):
 		win.getMouse()
 		a = raw_input("press any key to shutdown")
 
-def close_enough(n1, n2, rel_tol=1e-09, abs_tol=0.0):
-	return abs(n1-n2) <= max(rel_tol*max(abs(n1), abs(n2)), abs_tol)
+	def collect_data(self):
+		self.save_csv("x")
+		self.save_csv("y")
+		self.save_points()
+
+	def save_points(self):
+		with open("points.csv", "wb") as fp:
+			for p in self.all_p:
+				fp.write("{},{},{},{},{}\n".format(p.x, p.y, p.r, p.n, p.idx))
+		
+	def save_csv(self, axis_name):
+		x_list = sorted(self.all_p, key=lambda p: getattr(p, axis_name))
+		filename = "{name}N{name}.csv".format(name=axis_name)
+		min_v = getattr(self, "min_{}".format(axis_name))
+		max_v = getattr(self, "max_{}".format(axis_name))
+		with open(filename, "wb") as fp:
+			nv = 0
+			p_idx = 0
+			iter_v = 0
+			while True:
+				while p_idx < len(x_list) and getattr(x_list[p_idx], axis_name) < iter_v+min_v:
+					nv += 1
+					p_idx += 1
+				fp.write("{},{}\n".format(iter_v, nv))
+				if iter_v+min_v > max_v:
+					break
+				iter_v += 1
+
 
 def check_generation():
 	s = Simulator(config)
@@ -281,6 +324,7 @@ def check_generation():
 	print(s.min_x)
 	print(s.max_y)
 	print(s.min_y)
+	s.collect_data()
 	s.draw("test")
 
 if __name__ == "__main__":
