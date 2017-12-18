@@ -262,11 +262,8 @@ class Simulator(object):
 		win.getMouse()
 		a = raw_input("press any key to shutdown")
 
-
-
-
 def close_enough(n1, n2, rel_tol=1e-09, abs_tol=0.0):
-	return abs(n1-n1) <= max(rel_tol*max(abs(n1), abs(n2)), abs_tol)
+	return abs(n1-n2) <= max(rel_tol*max(abs(n1), abs(n2)), abs_tol)
 
 def check_generation():
 	s = Simulator(config)
@@ -283,23 +280,5 @@ def check_generation():
 	print(s.min_y)
 	s.draw("test")
 
-
-def main():
-	win = graphics.GraphWin("CSSA", canvas_width, canvas_height)
-	#cir = Circle(Point(100, 100), 70)
-	#cir.draw(win)
-	#cir.setOutline("black")
-	#cir.setFill("black")
-	line = graphics.Line(graphics.Point(100, 100), graphics.Point(50, 50))
-	line.draw(win)
-	line.setOutline(line_color)
-	line.setFill(line_color)
-	line.setWidth(line_weight)
-
-	win.getMouse()
-	a = raw_input("press any key to shutdown")
-	#win.close()
-
 if __name__ == "__main__":
 	check_generation()
-	#main()
