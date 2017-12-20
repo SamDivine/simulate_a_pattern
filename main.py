@@ -25,6 +25,7 @@ config = {
 	"b": 10,
 	"c": 10,
 	"d": 10,
+	"e": 15,
 	"r1": 2,
 	"r2": 4,
 	"alpha": 37,
@@ -116,6 +117,7 @@ class Simulator(object):
 		self.b = conf["b"]
 		self.c = conf["c"]
 		self.d = conf["d"]
+		self.e = conf["e"]
 		self.r1 = conf["r1"]
 		self.r2 = conf["r2"]
 		self.alpha = conf["alpha"]
@@ -189,7 +191,7 @@ class Simulator(object):
 			for p in self.trees[idx]:
 				if self.distance_square(point, p) < self.d*self.d:
 					return False
-		same_tree_d = max(self.a, self.b, self.c)
+		same_tree_d = max(self.a, self.b, self.c, self.e)
 		for p in self.trees[point.idx]:
 			if p is not point.parent and self.distance_square(point, p) < same_tree_d*same_tree_d:
 				return False
