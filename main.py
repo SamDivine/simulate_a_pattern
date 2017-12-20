@@ -13,19 +13,22 @@ random.seed(time.time())
 max_width = 1200
 max_height = 675
 
-random_x_range = (0, 200)
-random_y_range = (0, 200)
+random_x_range = (0, 300)
+random_y_range = (0, 300)
+
+draw_circles = True
+draw_lines = True
 
 config = {
 	"t": 200,
-	"a": 4,
-	"b": 4,
-	"c": 4,
-	"d": 4,
-	"r1": 0.5,
-	"r2": 1,
-	"alpha": 20,
-	"beta": 15,
+	"a": 10,
+	"b": 10,
+	"c": 10,
+	"d": 10,
+	"r1": 2,
+	"r2": 4,
+	"alpha": 37,
+	"beta": 31,
 	"p1": 0.6,
 	"p2": 0.35,
 	"p3": 0.05,
@@ -274,25 +277,30 @@ class Simulator(object):
 		x_scale = width/graph_width
 		y_scale = height/graph_height
 		point_scale = (x_scale+y_scale)/2
-		for p in self.all_p:
-			r = p.r*point_scale
-			x = (p.x-self.min_x+addition_bound)*x_scale
-			y = (p.y-self.min_y+addition_bound)*y_scale
-			cir = graphics.Circle(graphics.Point(x, y), r)
-			cir.draw(win)
-			cir.setOutline(circle_color)
-			cir.setFill(circle_color)
+		if draw_circles is True:
+			for p in self.all_p:
+				r = p.r*point_scale
+				x = (p.x-self.min_x+addition_bound)*x_scale
+				y = (p.y-self.min_y+addition_bound)*y_scale
+				cir = graphics.Circle(graphics.Point(x, y), r)
+				cir.draw(win)
+				cir.setOutline(circle_color)
+				cir.setFill(circle_color)
 
-		for line in self.lines:
-			x1 = (line.x1-self.min_x+addition_bound)*x_scale
-			x2 = (line.x2-self.min_x+addition_bound)*x_scale
-			y1 = (line.y1-self.min_y+addition_bound)*y_scale
-			y2 = (line.y2-self.min_y+addition_bound)*y_scale
-			li = graphics.Line(graphics.Point(x1, y1), graphics.Point(x2, y2))
-			li.draw(win)
-			li.setOutline(line_color)
-			li.setFill(line_color)
-			li.setWidth(line_weight)
+		if draw_lines is True:
+			for line in self.lines:
+				x1 = (line.x1-self.min_x+addition_bound)*x_scale
+				x2 = (line.x2-self.min_x+addition_bound)*x_scale
+				y1 = (line.y1-self.min_y+addition_bound)*y_scale
+				y2 = (line.y2-self.min_y+addition_bound)*y_scale
+				li = graphics.Line(graphics.Point(x1, y1), graphics.Point(x2, y2))
+				li.draw(win)
+				li.setOutline(line_color)
+				li.setFill(line_color)
+				li.setWidth(line_weight)
+
+		print("draw complete")
+		win.postscript(file="draw.ps", colormode="color")
 		win.getMouse()
 		a = raw_input("press any key to shutdown")
 
