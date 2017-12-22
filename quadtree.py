@@ -2,7 +2,7 @@
 
 from __future__ import division, print_function
 
-MAX_DEPTH = 10
+MAX_DEPTH = 16
 
 class Node(object):
 	def __init__(self, x, y, width, height, depth, min_size):
@@ -27,23 +27,24 @@ class Node(object):
 	def upper_y(self):
 		return self.y+self.height
 
+	@property
+	def can_spawn(self):
+		return self.depth < MAX_DEPTH and (self.height >= 2*self.min_size or self.width >= 2*self.min_size)
+
 	def add_children_nodes(self):
-		if self.depth >= MAX_DEPTH:
+		if not self.can_spawn:
 			return False
 		if self.children:
 			return True
 		children_width = self.width/2
 		children_height = self.height/2
-		if children_height >= self.min_size or children_width >= self.min_size:
-			self.children.extend([
-					Node(self.x, self.y, children_width, children_height, self.depth+1, self.min_size),
-					Node(self.x+children_width, self.y, children_width, children_height, self.depth+1, self.min_size),
-					Node(self.x, self.y+children_height, children_width, children_height, self.depth+1, self.min_size),
-					Node(self.x+children_width, self.y+children_height, children_width, children_height, self.depth+1, self.min_size)
-				])
-			return True
-		else:
-			return False
+		self.children.extend([
+			Node(self.x, self.y, children_width, children_height, self.depth+1, self.min_size),
+			Node(self.x+children_width, self.y, children_width, children_height, self.depth+1, self.min_size),
+			Node(self.x, self.y+children_height, children_width, children_height, self.depth+1, self.min_size),
+			Node(self.x+children_width, self.y+children_height, children_width, children_height, self.depth+1, self.min_size)
+		])
+		return True
 
 	def loop_generate(self):
 		# too slow
@@ -131,6 +132,32 @@ class Node(object):
 		print("{tab}{info}".format(tab="  "*self.depth, info=self))
 		for child in self.children:
 			child.print_tree()
+
+class IncTree(Node):
+	def generate_tree(self):
+		print("need not call generate_tree")
+
+	def recursive_generate(self):
+		print("need not call recursive_generate")
+
+	def loop_generate(self):
+		print("need not call loop_generate")
+
+	def add_item(self, item):
+		x, y = item.x, item.y
+		leaf = self.find_leaf(x, y)
+		while True:
+			if not leaf.can_spawn:
+				leaf.items.append(item)
+				break
+			else:
+				leaf.add_children_nodes()
+				for child in leaf.children:
+					if child.intersect(x, y):
+						leaf = child
+						break
+				else:
+					break
 
 if __name__ == "__main__":
 	a = Node(1, 2, 3, 4, 0, 0.3)

@@ -20,8 +20,8 @@ random_y_range = (0, 300)
 
 tree_version = True
 
-draw_circles = True
-draw_lines = True
+draw_circles = False
+draw_lines = False
 
 config = {
 	"t": 2000,
@@ -38,7 +38,7 @@ config = {
 	"p2": 0.35,
 	"p3": 0.05,
 	"M": 10,
-	"N": 20000,
+	"N": 100000,
 }
 
 def new_nv(x, y):
@@ -61,6 +61,17 @@ def dsin(d):
 
 def dcos(d):
 	return cos(radians(d))
+
+class CheckTime(object):
+	def __init__(self, name):
+		self.name = name
+
+	def __enter__(self):
+		self.start = time.time()
+		return self
+
+	def __exit__(self, exc_type, exc_value, exc_tb):
+		print("{}: {} seconds".format(self.name, time.time()-self.start))
 
 class Vector(object):
 	def __init__(self, x, y):
@@ -156,7 +167,8 @@ class Simulator(object):
 		y = random_y_range[0] - (self.N+2)*side_length
 		uy = random_y_range[1] + (self.N+2)*side_length
 		min_size = 2 * r
-		self.quadtree = quadtree.Node(x, y, ux-x, uy-y, 0, min_size)
+		#self.quadtree = quadtree.Node(x, y, ux-x, uy-y, 0, min_size)
+		self.quadtree = quadtree.IncTree(x, y, ux-x, uy-y, 0, min_size)
 		self.quadtree.generate_tree()
 
 	def insert_to_quadtree(self, point):
@@ -337,26 +349,28 @@ class Simulator(object):
 		y_scale = height/graph_height
 		point_scale = (x_scale+y_scale)/2
 		if draw_circles is True:
-			for p in self.all_p:
-				r = p.r*point_scale
-				x = (p.x-self.min_x+addition_bound)*x_scale
-				y = (p.y-self.min_y+addition_bound)*y_scale
-				cir = graphics.Circle(graphics.Point(x, y), r)
-				cir.draw(win)
-				cir.setOutline(circle_color)
-				cir.setFill(circle_color)
+			with CheckTime("draw circle time") as ct:
+				for p in self.all_p:
+					r = p.r*point_scale
+					x = (p.x-self.min_x+addition_bound)*x_scale
+					y = (p.y-self.min_y+addition_bound)*y_scale
+					cir = graphics.Circle(graphics.Point(x, y), r)
+					cir.draw(win)
+					cir.setOutline(circle_color)
+					cir.setFill(circle_color)
 
 		if draw_lines is True:
-			for line in self.lines:
-				x1 = (line.x1-self.min_x+addition_bound)*x_scale
-				x2 = (line.x2-self.min_x+addition_bound)*x_scale
-				y1 = (line.y1-self.min_y+addition_bound)*y_scale
-				y2 = (line.y2-self.min_y+addition_bound)*y_scale
-				li = graphics.Line(graphics.Point(x1, y1), graphics.Point(x2, y2))
-				li.draw(win)
-				li.setOutline(line_color)
-				li.setFill(line_color)
-				li.setWidth(line_weight)
+			with CheckTime("draw line time") as ct:
+				for line in self.lines:
+					x1 = (line.x1-self.min_x+addition_bound)*x_scale
+					x2 = (line.x2-self.min_x+addition_bound)*x_scale
+					y1 = (line.y1-self.min_y+addition_bound)*y_scale
+					y2 = (line.y2-self.min_y+addition_bound)*y_scale
+					li = graphics.Line(graphics.Point(x1, y1), graphics.Point(x2, y2))
+					li.draw(win)
+					li.setOutline(line_color)
+					li.setFill(line_color)
+					li.setWidth(line_weight)
 
 		print("draw complete")
 		win.postscript(file="draw.ps", colormode="color")
@@ -406,14 +420,12 @@ class Simulator(object):
 
 
 def check_generation():
-	start = time.time()
-	s = Simulator(config, use_tree=tree_version)
-	assert close_enough(s.p1+s.p2+s.p3, 1.0), "sum of 3 possibilities should be 1"
-	print("init time: {} seconds".format(time.time()-start))
-	start = time.time()
-	s.generate_first()
-	s.generate_it()
-	print("generate time: {} seconds".format(time.time()-start))
+	with CheckTime("init time") as ct:
+		s = Simulator(config, use_tree=tree_version)
+		assert close_enough(s.p1+s.p2+s.p3, 1.0), "sum of 3 possibilities should be 1"
+	with CheckTime("generate time") as ct:
+		s.generate_first()
+		s.generate_it()
 	print(len(s.all_p))
 	print(len(s.to_generate))
 	print(len(s.lines))
@@ -422,9 +434,8 @@ def check_generation():
 	print(s.max_y)
 	print(s.min_y)
 	s.collect_data()
-	start = time.time()
-	s.draw("test")
-	print("draw time: {} seconds".format(time.time()-start))
+	with CheckTime("draw time") as ct:
+		s.draw("test")
 	s.win.getMouse()
 	a = raw_input("press any key to shutdown")
 
