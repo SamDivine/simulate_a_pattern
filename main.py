@@ -4,6 +4,8 @@ from __future__ import division
 import os
 
 import graphics
+import quadtree
+
 from math import tan, radians, sin, cos, degrees, atan, pi
 import random
 import time
@@ -16,16 +18,18 @@ max_height = 675
 random_x_range = (0, 300)
 random_y_range = (0, 300)
 
+tree_version = True
+
 draw_circles = True
 draw_lines = True
 
 config = {
-	"t": 200,
+	"t": 2000,
 	"a": 10,
 	"b": 10,
 	"c": 10,
 	"d": 10,
-	"e": 15,
+	"e": 10,
 	"r1": 2,
 	"r2": 4,
 	"alpha": 37,
@@ -34,7 +38,7 @@ config = {
 	"p2": 0.35,
 	"p3": 0.05,
 	"M": 10,
-	"N": 2000,
+	"N": 20000,
 }
 
 def new_nv(x, y):
@@ -112,7 +116,7 @@ class Line(object):
 		self.y2 = child.y
 
 class Simulator(object):
-	def __init__(self, conf):
+	def __init__(self, conf, **kwargs):
 		self.a = conf["a"]
 		self.b = conf["b"]
 		self.c = conf["c"]
@@ -128,6 +132,7 @@ class Simulator(object):
 		self.M = conf["M"]
 		self.N = conf["N"]
 
+		self.quadtree = None
 		self.max_x = float("-inf")
 		self.max_y = float("-inf")
 		self.min_x = float("inf")
@@ -138,6 +143,29 @@ class Simulator(object):
 		self.lines = list()
 		for m in xrange(self.M):
 			self.trees.append(list())
+		self.use_tree = kwargs.get("use_tree", True)
+		if self.use_tree is True:
+			self.init_quadtree()
+
+	def init_quadtree(self):
+		theta = min(abs(self.alpha), abs(self.beta))
+		r = max(self.a, self.b, self.c)
+		side_length = r*dcos(theta)
+		x = random_x_range[0] - (self.N+2)*side_length
+		ux = random_x_range[1] + (self.N+2)*side_length
+		y = random_y_range[0] - (self.N+2)*side_length
+		uy = random_y_range[1] + (self.N+2)*side_length
+		min_size = 2 * r
+		self.quadtree = quadtree.Node(x, y, ux-x, uy-y, 0, min_size)
+		self.quadtree.generate_tree()
+
+	def insert_to_quadtree(self, point):
+		if self.quadtree is not None:
+			self.quadtree.add_item(point)
+
+	def insert_list_to_quadtree(self, points):
+		if self.quadtree is not None:
+			self.quadtree.extend_items(points)
 
 	def modify_bound(self, *points):
 		for p in list(points):
@@ -163,6 +191,7 @@ class Simulator(object):
 					self.to_generate.append(ball)
 					self.trees[m].append(ball)
 					self.all_p.append(ball)
+					self.insert_to_quadtree(ball)
 					break
 		print("inited it")
 
@@ -184,7 +213,7 @@ class Simulator(object):
 		y_diff = p1.y-p2.y
 		return x_diff*x_diff+y_diff*y_diff
 
-	def check_position(self, point):
+	def old_check_position(self, point):
 		for idx in xrange(self.M):
 			if idx == point.idx:
 				continue
@@ -196,6 +225,31 @@ class Simulator(object):
 			if p is not point.parent and self.distance_square(point, p) < same_tree_d*same_tree_d:
 				return False
 		return True
+
+	def new_check_position(self, point):
+		diff_tree_d = self.d
+		same_tree_d = max(self.a, self.b, self.c, self.e)
+		r = max(diff_tree_d, same_tree_d)
+		x, y = point.x, point.y
+		leaves = self.quadtree.find_leaves(x, y, r)
+		for leaf in leaves:
+			for item in leaf.items:
+				if item.idx == point.idx:
+					if item is point.parent:
+						continue
+					else:
+						dis = same_tree_d
+				else:
+					dis = diff_tree_d
+				if self.distance_square(point, item) < dis*dis:
+					return False
+		return True
+
+	def check_position(self, point):
+		if self.use_tree is True:
+			return self.new_check_position(point)
+		else:
+			return self.old_check_position(point)
 
 	def get_new_p(self, parent, cls, dis):
 		x, y, idx = parent.x, parent.y, parent.idx
@@ -225,6 +279,7 @@ class Simulator(object):
 			self.trees[idx].append(ball)
 			self.to_generate.append(ball)
 			self.all_p.append(ball)
+			self.insert_to_quadtree(ball)
 			return True
 		return False
 
@@ -244,6 +299,7 @@ class Simulator(object):
 			self.trees[idx].extend([node, b1, b2])
 			self.to_generate.extend([b1, b2])
 			self.all_p.extend([node, b1, b2])
+			self.insert_list_to_quadtree([node, b1, b2])
 			return True
 		return False
 
@@ -274,7 +330,8 @@ class Simulator(object):
 		if height > max_height:
 			width = width/height * max_height
 			height = max_height
-		win = graphics.GraphWin(title, width, height)
+		self.win = graphics.GraphWin(title, width, height)
+		win = self.win
 		win.setBackground(background_color)
 		x_scale = width/graph_width
 		y_scale = height/graph_height
@@ -303,8 +360,6 @@ class Simulator(object):
 
 		print("draw complete")
 		win.postscript(file="draw.ps", colormode="color")
-		win.getMouse()
-		a = raw_input("press any key to shutdown")
 
 	def collect_data(self):
 		self.save_csv("x")
@@ -351,11 +406,14 @@ class Simulator(object):
 
 
 def check_generation():
-	s = Simulator(config)
+	start = time.time()
+	s = Simulator(config, use_tree=tree_version)
 	assert close_enough(s.p1+s.p2+s.p3, 1.0), "sum of 3 possibilities should be 1"
-	print("Equal")
+	print("init time: {} seconds".format(time.time()-start))
+	start = time.time()
 	s.generate_first()
 	s.generate_it()
+	print("generate time: {} seconds".format(time.time()-start))
 	print(len(s.all_p))
 	print(len(s.to_generate))
 	print(len(s.lines))
@@ -364,7 +422,20 @@ def check_generation():
 	print(s.max_y)
 	print(s.min_y)
 	s.collect_data()
+	start = time.time()
 	s.draw("test")
+	print("draw time: {} seconds".format(time.time()-start))
+	s.win.getMouse()
+	a = raw_input("press any key to shutdown")
+
+def test():
+	start = time.time()
+	s = Simulator(config)
+	duration = time.time()-start
+	print("generate simulator success, takes {} seconds".format(duration))
+	leaf = s.quadtree.find_leaf(0, 0)
+	print(leaf)
 
 if __name__ == "__main__":
 	check_generation()
+	#test()

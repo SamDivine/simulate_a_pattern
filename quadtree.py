@@ -2,6 +2,7 @@
 
 from __future__ import division, print_function
 
+MAX_DEPTH = 10
 
 class Node(object):
 	def __init__(self, x, y, width, height, depth, min_size):
@@ -18,7 +19,17 @@ class Node(object):
 	def is_leaf(self):
 		return (not self.children)
 
+	@property
+	def upper_x(self):
+		return self.x+self.width
+
+	@property
+	def upper_y(self):
+		return self.y+self.height
+
 	def add_children_nodes(self):
+		if self.depth >= MAX_DEPTH:
+			return False
 		if self.children:
 			return True
 		children_width = self.width/2
@@ -34,14 +45,30 @@ class Node(object):
 		else:
 			return False
 
-	def generate_tree(self):
+	def loop_generate(self):
+		# too slow
+		to_generate_list = [self]
+		while True:
+			if not to_generate_list:
+				break
+			node = to_generate_list.pop(0)
+			node.add_children_nodes()
+			for child in node.children:
+				to_generate_list.append(child)
+
+	def recursive_generate(self):
 		self.add_children_nodes()
 		for child in self.children:
-			child.generate_tree()
+			child.recursive_generate()
 
-
+	def generate_tree(self):
+		self.recursive_generate()
+		
 	def intersect(self, x, y):
-		return self.x <= x < self.x+self.width and self.y <= y < self.y+self.height
+		return self.x <= x < self.upper_x and self.y <= y < self.upper_y
+
+	def circle_intersect(self, x, y, r):
+		return self.x-r <= x < self.upper_x+r and self.y-r <= y < self.upper_y+r
 
 	def find_items(self, x, y):
 		leaf = self.find_leaf(x, y)
@@ -66,6 +93,24 @@ class Node(object):
 					raise RuntimeError("No child intersect point({}, {}), tree generation may be wrong".format(x, y))
 				continue
 
+	def find_leaves(self, x, y, r):
+		to_check_node = [self]
+		ret = list()
+		while True:
+			if not to_check_node:
+				break
+			node = to_check_node.pop(0)
+			if not node.circle_intersect(x, y, r):
+				continue
+			if node.is_leaf:
+				ret.append(node)
+				continue
+			for child in node.children:
+				if child.circle_intersect(x, y, r):
+					to_check_node.append(child)
+		return ret
+
+
 	def add_item(self, item):
 		x, y = item.x, item.y
 		leaf = self.find_leaf(x, y)
@@ -74,6 +119,10 @@ class Node(object):
 		else:
 			leaf.items.append(item)
 			return True
+
+	def extend_items(self, items):
+		for item in items:
+			self.add_item(item)
 
 	def __repr__(self):
 		return "Node<x={x}, y={y}, width={width}, height={height}, depth={depth}, min_size={min_size}".format(x=self.x, y=self.y, width=self.width, height=self.height, depth=self.depth, min_size=self.min_size)
@@ -92,4 +141,7 @@ if __name__ == "__main__":
 	a.print_tree()
 	leaf = a.find_leaf(1.5, 5.5)
 	print(leaf)
+	leaves = a.find_leaves(2, 4, 0.2)
+	print(leaves)
+	print(len(leaves))
 
