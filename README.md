@@ -33,3 +33,8 @@
 生成所有点和线的时间： 40.86 s
 
 画圆时间： 878.72 s
+
+
+## 致谢
+
+感谢[psfile项目](https://github.com/clearclaw/psfile)提供简便的`postscript`文件写支持

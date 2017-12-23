@@ -5,12 +5,17 @@ import os
 
 import graphics
 import quadtree
+import psdrawer
 
 from math import tan, radians, sin, cos, degrees, atan, pi
 import random
 import time
 
 random.seed(time.time())
+
+MAX_DRAW_CIRCLES = 10000
+eps_filename = "draw.eps"
+ps_filename = "draw.ps"
 
 max_width = 1200
 max_height = 675
@@ -20,18 +25,18 @@ random_y_range = (0, 300)
 
 tree_version = True
 
-draw_circles = False
-draw_lines = False
+draw_circles = True
+draw_lines = True
 
 config = {
 	"t": 2000,
-	"a": 10,
-	"b": 10,
-	"c": 10,
-	"d": 10,
-	"e": 10,
-	"r1": 2,
-	"r2": 4,
+	"a": 1,
+	"b": 1,
+	"c": 1,
+	"d": 1,
+	"e": 1,
+	"r1": 0.2,
+	"r2": 0.4,
 	"alpha": 37,
 	"beta": 31,
 	"p1": 0.6,
@@ -48,7 +53,7 @@ def new_nv(x, y):
 background_color = "white"
 circle_color = "black"
 line_color = "black"
-line_weight = 1
+line_weight = 0.1
 
 def close_enough(n1, n2, rel_tol=1e-09, abs_tol=0.0):
 	return abs(n1-n2) <= max(rel_tol*max(abs(n1), abs(n2)), abs_tol)
@@ -144,6 +149,7 @@ class Simulator(object):
 		self.N = conf["N"]
 
 		self.quadtree = None
+		self.win = None
 		self.max_x = float("-inf")
 		self.max_y = float("-inf")
 		self.min_x = float("inf")
@@ -333,6 +339,32 @@ class Simulator(object):
 			if ret is True:
 				self.to_generate.pop(g_idx)
 
+	def init_win(self, width, height, title):
+		if len(self.all_p) <= MAX_DRAW_CIRCLES + 2:
+			self.win = graphics.GraphWin(title, width, height)
+			self.win.setBackground(background_color)
+		else:
+			print("too many circles, won't draw it, only save it to {}".format(eps_filename))
+
+	def win_draw_circle(self, x, y, r, color):
+		if self.win is not None:
+			cir = graphics.Circle(graphics.Point(x, y), r)
+			cir.draw(self.win)
+			cir.setOutline(color)
+			cir.setFill(color)
+
+	def win_draw_line(self, x1, y1, x2, y2, weight, color):
+		if self.win is not None:
+			li = graphics.Line(graphics.Point(x1, y1), graphics.Point(x2, y2))
+			li.draw(self.win)
+			li.setOutline(color)
+			li.setFill(color)
+			li.setWidth(weight)
+
+	def win_save_ps(self, filename):
+		if self.win is not None:
+			self.win.postscript(file=filename, colormode="color")
+
 	def draw(self, title="test"):
 		addition_bound = 2*max(self.r1, self.r2)
 		graph_height = self.max_y-self.min_y + 2*addition_bound
@@ -342,38 +374,36 @@ class Simulator(object):
 		if height > max_height:
 			width = width/height * max_height
 			height = max_height
-		self.win = graphics.GraphWin(title, width, height)
-		win = self.win
-		win.setBackground(background_color)
+		self.init_win(width, height, title)
+		self.ps_drawer = psdrawer.PsDrawer(eps_filename, width, height)
+		self.ps_drawer.set_background(background_color)
 		x_scale = width/graph_width
 		y_scale = height/graph_height
 		point_scale = (x_scale+y_scale)/2
 		if draw_circles is True:
 			with CheckTime("draw circle time") as ct:
+				self.ps_drawer.change_color(circle_color)
 				for p in self.all_p:
 					r = p.r*point_scale
 					x = (p.x-self.min_x+addition_bound)*x_scale
 					y = (p.y-self.min_y+addition_bound)*y_scale
-					cir = graphics.Circle(graphics.Point(x, y), r)
-					cir.draw(win)
-					cir.setOutline(circle_color)
-					cir.setFill(circle_color)
+					self.win_draw_circle(x, y, r, circle_color)
+					self.ps_drawer.draw_circle(x, y, r)
 
 		if draw_lines is True:
 			with CheckTime("draw line time") as ct:
+				self.ps_drawer.change_color(line_color)
 				for line in self.lines:
 					x1 = (line.x1-self.min_x+addition_bound)*x_scale
 					x2 = (line.x2-self.min_x+addition_bound)*x_scale
 					y1 = (line.y1-self.min_y+addition_bound)*y_scale
 					y2 = (line.y2-self.min_y+addition_bound)*y_scale
-					li = graphics.Line(graphics.Point(x1, y1), graphics.Point(x2, y2))
-					li.draw(win)
-					li.setOutline(line_color)
-					li.setFill(line_color)
-					li.setWidth(line_weight)
+					weight = line_weight*(x_scale+y_scale)/2
+					self.win_draw_line(x1, y1, x2, y2, weight, line_color)
+					self.ps_drawer.draw_line(x1, y1, x2, y2, weight)
 
 		print("draw complete")
-		win.postscript(file="draw.ps", colormode="color")
+		self.ps_drawer.close()
 
 	def collect_data(self):
 		self.save_csv("x")
@@ -436,8 +466,9 @@ def check_generation():
 	s.collect_data()
 	with CheckTime("draw time") as ct:
 		s.draw("test")
-	s.win.getMouse()
-	a = raw_input("press any key to shutdown")
+	if s.win:
+		s.win.getMouse()
+		a = raw_input("press any key to shutdown")
 
 def test():
 	start = time.time()
