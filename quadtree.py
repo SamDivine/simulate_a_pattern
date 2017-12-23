@@ -2,7 +2,7 @@
 
 from __future__ import division, print_function
 
-MAX_DEPTH = 16
+MAX_DEPTH = 24
 
 class Node(object):
 	def __init__(self, x, y, width, height, depth, min_size):

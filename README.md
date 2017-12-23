@@ -38,3 +38,5 @@
 ## 致谢
 
 感谢[psfile项目](https://github.com/clearclaw/psfile)提供简便的`postscript`文件写支持
+
+感谢`John M. Zelle`编写[graphics.py](http://mcsp.wartburg.edu/zelle/python/graphics.py)为`python 2.7`提供简便的调用`Tkinter`画图的功能
