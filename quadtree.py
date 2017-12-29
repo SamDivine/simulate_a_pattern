@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division, print_function
+from collections import deque
 
-MAX_DEPTH = 24
+MAX_DEPTH = 9
 
 class Node(object):
 	def __init__(self, x, y, width, height, depth, min_size):
@@ -47,17 +48,23 @@ class Node(object):
 		return True
 
 	def loop_generate(self):
-		# too slow
-		to_generate_list = [self]
+		# change list to deque, now the performance is almost same as recursive_generate
+		# BUT, both of these generate function face the same problem
+		#        when MAX_DEPTH comes to 11, the program raise MemoryError
+		# so, generating an entire tree at first may be a bad idea in some situations
+		to_generate_list = deque()
+		to_generate_list.append(self)
 		while True:
-			if not to_generate_list:
+			try:
+				node = to_generate_list.popleft()
+			except Exception as e:
 				break
-			node = to_generate_list.pop(0)
 			node.add_children_nodes()
 			for child in node.children:
 				to_generate_list.append(child)
 
 	def recursive_generate(self):
+		# I think this is not a real recursion
 		self.add_children_nodes()
 		for child in self.children:
 			child.recursive_generate()
@@ -160,15 +167,33 @@ class IncTree(Node):
 					break
 
 if __name__ == "__main__":
-	a = Node(1, 2, 3, 4, 0, 0.3)
-	print(a.is_leaf)
-	a.add_children_nodes()
-	print(a.is_leaf)
-	a.generate_tree()
-	a.print_tree()
-	leaf = a.find_leaf(1.5, 5.5)
-	print(leaf)
-	leaves = a.find_leaves(2, 4, 0.2)
-	print(leaves)
-	print(len(leaves))
+	import time
+	import sys
+	import os
+	import psutil
+	import cPickle
+	#start = time.time()
+	#a = Node(0, 0, 1024, 1024, 0, 0.1)
+	#a.recursive_generate()
+	#print(time.time()-start)
+	try:
+		start = time.time()
+		b = Node(0, 0, 1024, 1024, 0, 0.1)
+		print("Memory size of Node b is {} bytes".format(sys.getsizeof(b)))
+		print("Memory size of b.children is {} bytes".format(sys.getsizeof(b.children)))
+		b.loop_generate()
+		print(time.time()-start)
+		#print("Memory size of Node b is {} bytes".format(sys.getsizeof(b)))
+		print("Memory size of b.children is {} bytes".format(sys.getsizeof(b.children)))
+		print("Memory size of b.items is {} bytes".format(sys.getsizeof(b.items)))
+		p_s = cPickle.dumps(b)
+		print("cPickled Node b length is {}".format(len(p_s)))
+		sys.exit(0)
+	except Exception as e:
+		print(str(e))
+		sys.exit(1)
+	finally:
+		p = psutil.Process(os.getpid())
+		mem = p.memory_info()[0]/float(2**20)
+		print("memory usage: {} MB".format(mem))
 
