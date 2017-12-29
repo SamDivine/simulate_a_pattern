@@ -3,7 +3,7 @@
 from __future__ import division, print_function
 from collections import deque
 
-MAX_DEPTH = 9
+MAX_DEPTH = 10
 
 class Node(object):
 	def __init__(self, x, y, width, height, depth, min_size):
